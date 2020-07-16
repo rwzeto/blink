@@ -27,7 +27,8 @@ class frame_holder():
     def load_dataset(self, data_directory):
         return [str(data_directory / filename) for filename in os.listdir(data_directory) if ".tif" in filename]
     def load_image(self, filename):
-        return np.array(Image.open(filename).convert(mode='L'))
+        image = np.array(Image.open(filename).convert(mode='L'))
+        return np.array(image)#/np.mean(image)
     def lookup(self, query_index):
         return [image for image, index in zip(self.active_images, self.active_indices) if index==query_index][0]
     def initialize_images(self, n_images):
@@ -40,7 +41,8 @@ class frame_holder():
         trace = np.array([image[x,y] for image in self.active_images])
         np.savetxt(str(self.output_directory / ("%d_%d.txt"%(x,y))), trace, delimiter=",", fmt='%d')
         fig, ax = plt.subplots(1,1)
-        ax.plot(np.linspace(0, 60, len(trace)), trace)
+        # ax.plot(np.linspace(0, 60, len(trace)), trace)
+        ax.plot(range(len(trace)), trace, color='black', linewidth=1)
         ax.set_xlabel("Time (s)")
         ax.set_ylabel("Intensity (au)")
         ax.set_title("Pixel intensity for coords: (%d, %d)"%(x,y))
@@ -56,35 +58,40 @@ class interface():
         self.frame_holder = frame_holder
         self.fig, self.ax = plt.subplots(1,1)
         self.im = self.ax.imshow(self.frame_holder.active_images[0])
+        # self.im.set_clim(0, 75)
+        self.cbar = plt.colorbar(self.im, ax=self.ax)
         self.mainloop()
     def mainloop(self):
         plt.ion()
         plt.show()
         def onclick(event):
-            self.x.value = event.xdata
-            self.y.value = event.ydata
+            # these are transposed compared to the data
+            self.y.value = event.xdata
+            self.x.value = event.ydata
             self.click.value = 1
         self.cid = self.fig.canvas.mpl_connect('button_press_event', onclick)
         while True:
             for frame_index in self.frame_holder.active_indices:
                 self.im.set_data(self.frame_holder.lookup(frame_index))
                 self.ax.set_title("%d"%(frame_index))
+                # self.cbar.draw_all()
+                # self.fig.colorbar(self.im, ax=self.ax)
                 self.fig.canvas.draw()
                 frame_index = frame_index + 1
                 self.fig.canvas.flush_events()
-                time.sleep(.05)
+                time.sleep(.0001)
     
 def generate_report(x, y, click, frame_holder):
     while True:
         if click.value == 1:
-            mapped_x, mapped_y = int(x.value), int(y.value)
+            mapped_x, mapped_y = round(x.value), round(y.value)
             click.value = 0
             frame_holder.generate_report(mapped_x, mapped_y)
         time.sleep(0.001)
         
 
 if __name__ == '__main__':
-    current_dir = "004"
+    current_dir = "005"
     dset2 = frame_holder(data_directory / current_dir, output_directory / current_dir)
     x = Value('f', 0.0)
     y = Value('f', 0.0)
