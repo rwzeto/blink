@@ -17,8 +17,9 @@ output_directory = Path("./output")
 ACTIVE_IMAGES = 'all'
 
 class frame_holder():
-    def __init__(self, data_directory):
+    def __init__(self, data_directory, output_directory):
         self.data_directory = data_directory
+        self.output_directory = output_directory
         self.filenames = self.load_dataset(data_directory)
         self.active_images = []
         self.active_indices = []
@@ -34,6 +35,18 @@ class frame_holder():
             n_images = len(self.filenames)
         self.active_images = [self.load_image(filename) for filename in self.filenames[:n_images]]
         self.active_indices = [n for n, _ in enumerate(self.filenames[:n_images])]
+    def generate_report(self, x, y):
+        print("Generating report for (%d, %d)"%(x, y))
+        trace = np.array([image[x,y] for image in self.active_images])
+        np.savetxt(str(self.output_directory / ("%d_%d.txt"%(x,y))), trace, delimiter=",", fmt='%d')
+        fig, ax = plt.subplots(1,1)
+        ax.plot(np.linspace(0, 60, len(trace)), trace)
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Intensity (au)")
+        ax.set_title("Pixel intensity for coords: (%d, %d)"%(x,y))
+        plt.savefig(str(self.output_directory / ("%d_%d.png"%(x,y))), dpi=200)
+        print("Done.")
+
 
 class interface():
     def __init__(self, x, y, click, frame_holder, mode=None):
@@ -53,25 +66,26 @@ class interface():
             self.click.value = 1
         self.cid = self.fig.canvas.mpl_connect('button_press_event', onclick)
         while True:
-            for frame_index in self.frame_holder.active_indices[:20]:
+            for frame_index in self.frame_holder.active_indices:
                 self.im.set_data(self.frame_holder.lookup(frame_index))
                 self.ax.set_title("%d"%(frame_index))
                 self.fig.canvas.draw()
                 frame_index = frame_index + 1
                 self.fig.canvas.flush_events()
-                time.sleep(.1)
+                time.sleep(.05)
     
 def generate_report(x, y, click, frame_holder):
     while True:
         if click.value == 1:
-            mapped_x, mapped_y = x.value, y.value
+            mapped_x, mapped_y = int(x.value), int(y.value)
             click.value = 0
-            print(int(mapped_x), int(mapped_y))
-        time.sleep(0.01)
+            frame_holder.generate_report(mapped_x, mapped_y)
+        time.sleep(0.001)
         
 
 if __name__ == '__main__':
-    dset2 = frame_holder(data_directory / "002")
+    current_dir = "004"
+    dset2 = frame_holder(data_directory / current_dir, output_directory / current_dir)
     x = Value('f', 0.0)
     y = Value('f', 0.0)
     click = Value('i', 0)
@@ -87,5 +101,4 @@ if __name__ == '__main__':
 
 
     
-
-# mapping function for 1d graph
+# "generating report" text
