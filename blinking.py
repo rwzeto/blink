@@ -16,10 +16,13 @@ output_directory = Path("./output")
 
 ACTIVE_IMAGES = 'all'
 
+results = np.zeros((256, 256))
+
 class frame_holder():
     def __init__(self, data_directory, output_directory):
         self.data_directory = data_directory
         self.output_directory = output_directory
+        self.clicked_pixels = []
         self.filenames = self.load_dataset(data_directory)
         self.active_images = []
         self.active_indices = []
@@ -27,9 +30,15 @@ class frame_holder():
     def load_dataset(self, data_directory):
         return [str(data_directory / filename) for filename in os.listdir(data_directory) if ".tif" in filename]
     def load_image(self, filename):
-        image = np.array(Image.open(filename).convert(mode='L'))
+        image = np.array(Image.open(filename).convert(mode='L').resize((256,256)))
         return np.array(image)#/np.mean(image)
+    # def lookup(self, query_index):
+    #     return [image for image, index in zip(self.active_images, self.active_indices) if index==query_index][0]
     def lookup(self, query_index):
+        image = [image for image, index in zip(self.active_images, self.active_indices) if index==query_index][0]
+        for coordinate in self.clicked_pixels:
+            x, y = round(coordinate[0]), round(coordinate[1])
+            image[x, y] = 0
         return [image for image, index in zip(self.active_images, self.active_indices) if index==query_index][0]
     def initialize_images(self, n_images):
         if n_images == 'all':
@@ -37,17 +46,20 @@ class frame_holder():
         self.active_images = [self.load_image(filename) for filename in self.filenames[:n_images]]
         self.active_indices = [n for n, _ in enumerate(self.filenames[:n_images])]
     def generate_report(self, x, y):
-        print("Generating report for (%d, %d)"%(x, y))
-        trace = np.array([image[x,y] for image in self.active_images])
-        np.savetxt(str(self.output_directory / ("%d_%d.txt"%(x,y))), trace, delimiter=",", fmt='%d')
-        fig, ax = plt.subplots(1,1)
-        # ax.plot(np.linspace(0, 60, len(trace)), trace)
-        ax.plot(range(len(trace)), trace, color='black', linewidth=1)
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Intensity (au)")
-        ax.set_title("Pixel intensity for coords: (%d, %d)"%(x,y))
-        plt.savefig(str(self.output_directory / ("%d_%d.png"%(x,y))), dpi=200)
-        print("Done.")
+        global results
+        results[x, y] = 1
+        np.savetxt(str(self.output_directory / "indices.txt"), results, fmt='%d')
+        # print("Generating report for (%d, %d)"%(x, y))
+        # trace = np.array([image[x,y] for image in self.active_images])
+        # np.savetxt(str(self.output_directory / ("%d_%d.txt"%(x,y))), trace, delimiter=",", fmt='%d')
+        # fig, ax = plt.subplots(1,1)
+        # # ax.plot(np.linspace(0, 60, len(trace)), trace)
+        # ax.plot(range(len(trace)), trace, color='black', linewidth=1)
+        # ax.set_xlabel("Time (s)")
+        # ax.set_ylabel("Intensity (au)")
+        # ax.set_title("Pixel intensity for coords: (%d, %d)"%(x,y))
+        # plt.savefig(str(self.output_directory / ("%d_%d.png"%(x,y))), dpi=200)
+        # print("Done.")
 
 
 class interface():
@@ -69,6 +81,7 @@ class interface():
             self.y.value = event.xdata
             self.x.value = event.ydata
             self.click.value = 1
+            self.frame_holder.clicked_pixels += [(self.x.value, self.y.value)]
         self.cid = self.fig.canvas.mpl_connect('button_press_event', onclick)
         while True:
             for frame_index in self.frame_holder.active_indices:
@@ -79,7 +92,7 @@ class interface():
                 self.fig.canvas.draw()
                 frame_index = frame_index + 1
                 self.fig.canvas.flush_events()
-                time.sleep(.0001)
+                time.sleep(.1)
     
 def generate_report(x, y, click, frame_holder):
     while True:
@@ -91,7 +104,7 @@ def generate_report(x, y, click, frame_holder):
         
 
 if __name__ == '__main__':
-    current_dir = "005"
+    current_dir = "004"
     dset2 = frame_holder(data_directory / current_dir, output_directory / current_dir)
     x = Value('f', 0.0)
     y = Value('f', 0.0)
