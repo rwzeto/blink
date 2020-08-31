@@ -102,9 +102,10 @@ def generate_report(x, y, click, frame_holder):
             frame_holder.generate_report(mapped_x, mapped_y)
         time.sleep(0.001)
         
+# 002 is done
 
 if __name__ == '__main__':
-    current_dir = "004"
+    current_dir = "003"
     dset2 = frame_holder(data_directory / current_dir, output_directory / current_dir)
     x = Value('f', 0.0)
     y = Value('f', 0.0)
