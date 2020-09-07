@@ -105,7 +105,7 @@ def generate_report(x, y, click, frame_holder):
 # 002 is done
 
 if __name__ == '__main__':
-    current_dir = "003"
+    current_dir = "005"
     dset2 = frame_holder(data_directory / current_dir, output_directory / current_dir)
     x = Value('f', 0.0)
     y = Value('f', 0.0)
